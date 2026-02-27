@@ -1,0 +1,7 @@
+export const DEFAULT_PORTS = [
+  3000, 3001, 4200, 5000, 5173,
+  5432, 6379, 8000, 8080, 8443,
+  9000, 27017,
+];
+
+export const DEFAULT_TIMEOUT = 1000; // ms
