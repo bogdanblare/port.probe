@@ -1,7 +1,7 @@
 {
   "name": "devprobe",
-  "version": "0.2.0",
-  "description": "Instant diagnostics for your local dev environment",
+  "version": "0.2.1",
+  "description": "Port scanner & process resolver for local dev environment. Find what's listening, which process owns it.",
   "type": "module",
   "bin": {
     "devprobe": "bin/portprobe.js"
@@ -14,11 +14,21 @@
     "test:watch": "vitest"
   },
   "keywords": [
+    "port-scanner",
     "port",
     "scanner",
+    "lsof",
+    "netstat",
+    "process",
+    "EADDRINUSE",
     "devtools",
     "cli",
-    "diagnostics"
+    "diagnostics",
+    "health-check",
+    "tcp",
+    "http",
+    "ai-agent",
+    "claude-code"
   ],
   "author": "blare",
   "license": "MIT",
