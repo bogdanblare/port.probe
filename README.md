@@ -1,126 +1,106 @@
-# portprobe
+# devprobe
 
-Instant port diagnostics for your local dev environment.
+**Instant diagnostics for your local dev environment.** One command — see every listening port, which process owns it, and whether it responds.
+
+[![npm](https://img.shields.io/npm/v/devprobe)](https://www.npmjs.com/package/devprobe)
+[![license](https://img.shields.io/npm/l/devprobe)](LICENSE)
+
+---
+
+```bash
+$ npx devprobe
+
+ PORT  | PID   | PROCESS          | STATUS | LATENCY | PROTO
+-------|-------|------------------|--------|---------|--------
+ 3000  | 12841 | node             | UP     | 2ms     | HTTP 200
+ 5432  | 1023  | postgres         | UP     | 1ms     | TCP
+ 5500  | 9912  | node             | UP     | 1ms     | HTTP 200
+ 6379  | 1087  | redis-server     | UP     | <1ms    | TCP
+ 8080  | 5523  | java             | UP     | 12ms    | HTTP 200
+ 24282 | 3301  | python           | UP     | 3ms     | HTTP 404
+```
+
+No config. No port lists to maintain. It asks the OS directly what's listening.
 
 ## Why
 
-Every developer has hit it: you start a server and get `EADDRINUSE`, then spend minutes figuring out what's hogging the port. AI coding agents like Claude Code hit the same wall -- they burn tokens retrying commands and guessing what went wrong.
+- `EADDRINUSE` — what's using port 3000? Now you know instantly
+- **AI agents** (Claude Code, Cursor, etc.) waste tokens running `lsof`, parsing output, retrying — `devprobe --json` gives them structured data in one call
+- **Zero guesswork** — shows ALL listening ports, not just a predefined list
 
-portprobe scans common dev ports in parallel, shows what's listening, which process owns it, and whether it responds to HTTP. One command, zero guesswork.
-
-## Quick start
-
-Run without installing:
+## Install
 
 ```bash
-npx portprobe
-```
-
-Or install globally:
-
-```bash
-npm i -g portprobe
+npx devprobe            # run without installing
+npm i -g devprobe       # or install globally
 ```
 
 ## Usage
 
-### Default scan
-
-Scans common dev ports (3000, 3001, 4200, 5000, 5173, 5432, 6379, 8000, 8080, 8443, 9000, 27017) and prints a table:
-
 ```bash
-portprobe
+devprobe                # show all listening ports
+devprobe 3000           # check specific port
+devprobe --range 3000-9000   # scan a range
+devprobe --json         # JSON output (for scripts & AI agents)
+devprobe --timeout 2000 # custom timeout in ms
 ```
 
-### JSON output
-
-Machine-readable output for scripts and AI agents:
-
-```bash
-portprobe --json
-```
-
-### Single port check
-
-Check whether a specific port is in use:
-
-```bash
-portprobe 3000
-```
-
-### Range scan
-
-Scan a custom range of ports:
-
-```bash
-portprobe --range 3000-9000
-```
-
-### Custom timeout
-
-Set the TCP connection timeout in milliseconds (default: 1000):
-
-```bash
-portprobe --timeout 2000
-```
-
-## Flags
+### Flags
 
 | Flag | Description | Default |
 |---|---|---|
 | `[port]` | Check a single port | — |
 | `--json` | Output as JSON | `false` |
-| `--range <from-to>` | Scan a port range (e.g. `3000-9000`) | — |
+| `--range <from-to>` | Scan a port range | — |
 | `--timeout <ms>` | Connection timeout in ms | `1000` |
 | `--version` | Show version | — |
 | `--help` | Show help | — |
 
-## AI Agent integration
+## For AI Agents
 
-portprobe is designed to work well with AI coding agents. Use `--json` to get structured output that an agent can parse directly:
-
-```bash
-portprobe --json
-```
-
-Returns an array of results:
+`devprobe --json` returns structured data that any AI coding agent can parse:
 
 ```json
-[
-  {
-    "port": 3000,
-    "status": "up",
-    "pid": 12345,
-    "process": "node",
-    "latency": 2,
-    "protocol": "http"
-  },
-  {
-    "port": 5432,
-    "status": "up",
-    "pid": 501,
-    "process": "postgres",
-    "latency": 1,
-    "protocol": null
-  },
-  {
-    "port": 8080,
-    "status": "free",
-    "pid": null,
-    "process": null,
-    "latency": null,
-    "protocol": null
-  }
-]
+{
+  "ports": [
+    {
+      "port": 3000,
+      "status": "up",
+      "pid": 12841,
+      "process": "node",
+      "latency": 2,
+      "protocol": "HTTP 200"
+    }
+  ]
+}
 ```
 
-An agent can run `npx portprobe --json` before starting a dev server to pick an open port or diagnose a conflict without trial and error.
+Add to your project's `CLAUDE.md` or agent config:
+```
+Use `devprobe --json` to diagnose port conflicts instead of lsof/netstat.
+```
 
 ## Platforms
 
-- **macOS** — full support (uses `lsof` for process resolution)
-- **Linux** — full support (uses `lsof` for process resolution)
-- **Windows** — best-effort (uses `netstat` for process resolution)
+- **macOS** — full support (`lsof`)
+- **Linux** — full support (`lsof`)
+- **Windows** — best-effort (`netstat`)
+
+## Roadmap
+
+- [ ] `--watch` — realtime monitoring
+- [ ] `--wait <port>` — wait until port is available
+- [ ] `--diagnose` — problem analysis + recommendations
+- [ ] Auto-detect service type (PostgreSQL, Redis, MySQL, etc.)
+- [ ] Docker container awareness
+
+## Support the project
+
+If devprobe saved you time, consider:
+
+- Star this repo — it helps others find it
+- [Sponsor on GitHub](https://github.com/sponsors/bogdanblare) — support development directly
+- Share with your team — the more users, the better it gets
 
 ## License
 

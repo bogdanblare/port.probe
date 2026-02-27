@@ -8,6 +8,78 @@ interface ProcessInfo {
   name: string | null;
 }
 
+export interface ListeningPort {
+  port: number;
+  pid: number;
+  name: string | null;
+}
+
+export async function discoverListeningPorts(): Promise<ListeningPort[]> {
+  try {
+    if (process.platform === "win32") {
+      return discoverWindows();
+    }
+    return discoverUnix();
+  } catch {
+    return [];
+  }
+}
+
+async function discoverUnix(): Promise<ListeningPort[]> {
+  const { stdout } = await execFileAsync("lsof", [
+    "-iTCP", "-sTCP:LISTEN", "-P", "-n", "-Fpn",
+  ]);
+
+  const results: ListeningPort[] = [];
+  let currentPid: number | null = null;
+
+  for (const line of stdout.split("\n")) {
+    if (line.startsWith("p")) {
+      currentPid = parseInt(line.slice(1), 10);
+    } else if (line.startsWith("n") && currentPid !== null) {
+      const match = line.match(/:(\d+)$/);
+      if (match) {
+        const port = parseInt(match[1], 10);
+        const name = await getProcessName(currentPid);
+        results.push({ port, pid: currentPid, name });
+      }
+    }
+  }
+
+  // dedupe by port (keep first)
+  const seen = new Set<number>();
+  return results.filter((r) => {
+    if (seen.has(r.port)) return false;
+    seen.add(r.port);
+    return true;
+  });
+}
+
+async function discoverWindows(): Promise<ListeningPort[]> {
+  const { stdout } = await execFileAsync("netstat", ["-ano"]);
+  const results: ListeningPort[] = [];
+  const seen = new Set<number>();
+
+  for (const line of stdout.split("\n")) {
+    if (!line.includes("LISTENING")) continue;
+    const parts = line.trim().split(/\s+/);
+    const addrPart = parts[1];
+    if (!addrPart) continue;
+    const match = addrPart.match(/:(\d+)$/);
+    if (!match) continue;
+
+    const port = parseInt(match[1], 10);
+    if (seen.has(port)) continue;
+    seen.add(port);
+
+    const pid = parseInt(parts[parts.length - 1], 10);
+    const name = await getProcessName(pid);
+    results.push({ port, pid, name });
+  }
+
+  return results;
+}
+
 export async function resolveProcess(port: number): Promise<ProcessInfo> {
   try {
     if (process.platform === "win32") {

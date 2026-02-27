@@ -1,18 +1,36 @@
 import { checkTcp } from "./tcp.js";
-import { resolveProcess } from "./process.js";
+import { resolveProcess, discoverListeningPorts } from "./process.js";
 import { checkHttp } from "../health/http.js";
 import { DEFAULT_TIMEOUT } from "../constants.js";
 import type { PortResult, ScanOptions } from "../types.js";
 
 export async function scanPorts(options: ScanOptions): Promise<PortResult[]> {
   const timeout = options.timeout ?? DEFAULT_TIMEOUT;
-  const ports = resolvePorts(options);
+
+  // If specific ports or range given, scan those
+  if ((options.ports && options.ports.length > 0) || options.range) {
+    const ports = resolvePorts(options);
+    return Promise.all(ports.map((port) => scanSinglePort(port, timeout)));
+  }
+
+  // Default: discover all listening ports from OS
+  const listening = await discoverListeningPorts();
 
   const results = await Promise.all(
-    ports.map((port) => scanSinglePort(port, timeout))
+    listening.map(async (entry) => {
+      const httpResult = await checkHttp(entry.port, timeout);
+      return {
+        port: entry.port,
+        status: "up" as const,
+        pid: entry.pid,
+        process: entry.name,
+        latency: httpResult.latency,
+        protocol: httpResult.protocol ?? "TCP",
+      };
+    })
   );
 
-  return results;
+  return results.sort((a, b) => a.port - b.port);
 }
 
 function resolvePorts(options: ScanOptions): number[] {
